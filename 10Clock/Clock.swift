@@ -110,6 +110,9 @@ open class TenClock : UIControl{
 
     open var headText: String = "Start"
     open var tailText: String = "End"
+    
+    open var headImage: UIImage!
+    open var tailImage: UIImage!
 
     open var headTextColor = UIColor.black
     open var tailTextColor = UIColor.black
@@ -126,10 +129,7 @@ open class TenClock : UIControl{
     func disabledFormattedColor(_ color:UIColor) -> UIColor{
         return disabled ? color.greyscale : color
     }
-
-
-
-
+ 
     var trackWidth:CGFloat {return pathWidth }
     func proj(_ theta:Angle) -> CGPoint{
         let center = self.layer.center
@@ -280,7 +280,13 @@ open class TenClock : UIControl{
             clockwise: true).cgPath
     }
 
-
+    func image(_ image: UIImage) -> CALayer {
+        let i = CALayer()
+        i.contents = image.cgImage
+        i.bounds.size = CGSize(width: 12, height: 12)
+        return i
+    }
+    
     func tlabel(_ str:String, color:UIColor? = nil) -> CATextLayer{
         let f = UIFont.preferredFont(forTextStyle: UIFontTextStyle.caption2)
         let cgFont = CTFontCreateWithName(f.fontName as CFString?, f.pointSize/2,nil)
@@ -318,8 +324,19 @@ open class TenClock : UIControl{
         topTailLayer.fillColor = disabledFormattedColor(tailBackgroundColor).cgColor
         topHeadLayer.sublayers?.forEach({$0.removeFromSuperlayer()})
         topTailLayer.sublayers?.forEach({$0.removeFromSuperlayer()})
-        let stText = tlabel(headText, color: disabledFormattedColor(headTextColor))
-        let endText = tlabel(tailText, color: disabledFormattedColor(tailTextColor))
+        let stText:CALayer
+        if let headImage = headImage {
+            stText = image(headImage)
+        } else {
+            stText = tlabel(headText, color: disabledFormattedColor(headTextColor))
+        }
+        
+        let endText:CALayer
+        if let tailImage = tailImage {
+            endText = image(tailImage)
+        } else {
+            endText = tlabel(tailText, color: disabledFormattedColor(tailTextColor))
+        }
         stText.position = topHeadLayer.center
         endText.position = topTailLayer.center
         topHeadLayer.addSublayer(stText)
