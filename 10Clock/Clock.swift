@@ -30,9 +30,9 @@ open class TenClock : UIControl{
 
     open var delegate:TenClockDelegate?
     //overall inset. Controls all sizes.
-    @IBInspectable var insetAmount: CGFloat = 40
+    @IBInspectable open var insetAmount: CGFloat = 40
     var internalShift: CGFloat = 5;
-    var pathWidth:CGFloat = 54
+    open var pathWidth:CGFloat = 54
 
     var timeStepSize: CGFloat = 5
     let gradientLayer = CAGradientLayer()
@@ -97,7 +97,11 @@ open class TenClock : UIControl{
     open var numeralsColor:UIColor? = UIColor.darkGray
     open var minorTicksColor:UIColor? = UIColor.lightGray
     open var majorTicksColor:UIColor? = UIColor.blue
-    open var centerTextColor:UIColor? = UIColor.darkGray
+    open var centerTextColor:UIColor? = UIColor.white
+    open var trackColor: UIColor? = UIColor.clear
+    open var pathColor: UIColor?
+    
+    open var numeralsFont: UIFont?
 
     open var titleColor = UIColor.lightGray
     open var titleGradientMask = false
@@ -110,6 +114,7 @@ open class TenClock : UIControl{
 
     open var headText: String = "Start"
     open var tailText: String = "End"
+    open var centerText:String?
     
     open var headImage: UIImage!
     open var tailImage: UIImage!
@@ -228,10 +233,6 @@ open class TenClock : UIControl{
         repLayer2.occupation  =  (internalInset.size, overallPathLayer.center)
         numeralsLayer.occupation = (numeralInset.size, layer.center)
 
-        trackLayer.fillColor = UIColor.clear.cgColor
-        pathLayer.fillColor = UIColor.clear.cgColor
-
-
         CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
         updateGradientLayer()
         updateTrackLayerPath()
@@ -246,8 +247,8 @@ open class TenClock : UIControl{
     func updateGradientLayer() {
 
         gradientLayer.colors =
-            [tintColor,
-                tintColor.modified(withAdditionalHue: -0.08, additionalSaturation: 0.15, additionalBrightness: 0.2)]
+            [pathColor ?? tintColor,
+                pathColor ?? tintColor.modified(withAdditionalHue: -0.08, additionalSaturation: 0.15, additionalBrightness: 0.2)]
                 .map(disabledFormattedColor)
                 .map{$0.cgColor}
         gradientLayer.mask = overallPathLayer
@@ -262,7 +263,8 @@ open class TenClock : UIControl{
                     height: trackLayer.size.width)))
         trackLayer.lineWidth = pathWidth
         trackLayer.path = circle.cgPath
-
+        trackLayer.strokeColor = trackColor?.cgColor
+        trackLayer.fillColor = UIColor.clear.cgColor
     }
     override open func layoutSubviews() {
         update()
@@ -289,7 +291,7 @@ open class TenClock : UIControl{
     
     func tlabel(_ str:String, color:UIColor? = nil) -> CATextLayer{
         let f = UIFont.preferredFont(forTextStyle: UIFontTextStyle.caption2)
-        let cgFont = CTFontCreateWithName(f.fontName as CFString?, f.pointSize/2,nil)
+        let cgFont = CTFontCreateWithName(f.fontName as CFString!, f.pointSize/2,nil)
         let l = CATextLayer()
         l.bounds.size = CGSize(width: 30, height: 15)
         l.fontSize = f.pointSize
@@ -346,14 +348,14 @@ open class TenClock : UIControl{
 
     func updateWatchFaceNumerals() {
         numeralsLayer.sublayers?.forEach({$0.removeFromSuperlayer()})
-        let f = UIFont.preferredFont(forTextStyle: UIFontTextStyle.caption2)
-        let cgFont = CTFontCreateWithName(f.fontName as CFString?, f.pointSize/2,nil)
+        let f = numeralsFont ?? UIFont.preferredFont(forTextStyle: UIFontTextStyle.caption2)
+        let cgFont = CTFontCreateWithName(f.fontName as CFString!, f.pointSize/2,nil)
         let startPos = CGPoint(x: numeralsLayer.bounds.midX, y: 15)
         let origin = numeralsLayer.center
         let step = (2 * M_PI) / 12
         for i in (1 ... 12){
             let l = CATextLayer()
-            l.bounds.size = CGSize(width: i > 9 ? 18 : 8, height: 15)
+            l.bounds.size = CGSize(width: i > 9 ? 18 : 8, height: 10)
             l.fontSize = f.pointSize
             l.alignmentMode = kCAAlignmentCenter
             l.contentsScale = UIScreen.main.scale
@@ -367,10 +369,10 @@ open class TenClock : UIControl{
     }
     func updateWatchFaceTitle(){
         let f = UIFont.preferredFont(forTextStyle: UIFontTextStyle.title1)
-        let cgFont = CTFontCreateWithName(f.fontName as CFString?, f.pointSize/2,nil)
+        let cgFont = CTFontCreateWithName(f.fontName as CFString!, 15,nil)
 //        let titleTextLayer = CATextLayer()
-        titleTextLayer.bounds.size = CGSize( width: titleTextInset.size.width, height: 50)
-        titleTextLayer.fontSize = f.pointSize
+//        titleTextLayer.bounds.size = CGSize( width: titleTextInset.size.width, height: 50)
+        titleTextLayer.fontSize = 15
         titleTextLayer.alignmentMode = kCAAlignmentCenter
         titleTextLayer.foregroundColor = disabledFormattedColor(centerTextColor ?? tintColor).cgColor
         titleTextLayer.contentsScale = UIScreen.main.scale
@@ -383,34 +385,35 @@ open class TenClock : UIControl{
             fiveMinIncrements += (24 * (60/5))
         }
         
-        titleTextLayer.string = "\(fiveMinIncrements / 12)hr \((fiveMinIncrements % 12) * 5)min"
+        titleTextLayer.string = centerText ?? "\(fiveMinIncrements / 12)hr \((fiveMinIncrements % 12) * 5)min"
+        titleTextLayer.bounds.size = titleTextLayer.preferredFrameSize()
         titleTextLayer.position = gradientLayer.center
 
     }
-    func tick() -> CAShapeLayer{
+    func tick(_ height: CGFloat) -> CAShapeLayer{
         let tick = CAShapeLayer()
         let path = UIBezierPath()
-        path.move(to: CGPoint(x: 0,y: -3))
-        path.addLine(to: CGPoint(x: 0,y: 3))
+        path.move(to: CGPoint(x: 0,y: 0))
+        path.addLine(to: CGPoint(x: 0,y: height))
         tick.path  = path.cgPath
-        tick.bounds.size = CGSize(width: 6, height: 6)
+        tick.bounds.size = CGSize(width: 0, height: height)
         return tick
     }
 
     func updateWatchFaceTicks() {
         repLayer.sublayers?.forEach({$0.removeFromSuperlayer()})
-        let t = tick()
+        let t = tick(4.5)
         t.strokeColor = disabledFormattedColor(minorTicksColor ?? tintColor).cgColor
-        t.position = CGPoint(x: repLayer.bounds.midX, y: 10)
+        t.position = CGPoint(x: repLayer.bounds.midX, y: 5)
         repLayer.addSublayer(t)
         repLayer.position = self.bounds.center
         repLayer.bounds.size = self.internalInset.size
 
         repLayer2.sublayers?.forEach({$0.removeFromSuperlayer()})
-        let t2 = tick()
+        let t2 = tick(9)
         t2.strokeColor = disabledFormattedColor(majorTicksColor ?? tintColor).cgColor
         t2.lineWidth = 2
-        t2.position = CGPoint(x: repLayer2.bounds.midX, y: 10)
+        t2.position = CGPoint(x: repLayer2.bounds.midX, y: 5)
         repLayer2.addSublayer(t2)
         repLayer2.position = self.bounds.center
         repLayer2.bounds.size = self.internalInset.size
@@ -426,7 +429,7 @@ open class TenClock : UIControl{
         overallPathLayer.addSublayer(pathLayer)
         overallPathLayer.addSublayer(headLayer)
         overallPathLayer.addSublayer(tailLayer)
-        overallPathLayer.addSublayer(titleTextLayer)
+        layer.addSublayer(titleTextLayer)
         layer.addSublayer(overallPathLayer)
         layer.addSublayer(gradientLayer)
         gradientLayer.addSublayer(topHeadLayer)
